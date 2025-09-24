@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visor Interactivo con frases</title>
+<style>
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f0f0f0;
+  font-family: Arial, sans-serif;
+  padding: 10px;
+  margin: 0;
+}
+
+h2 {
+  text-align: center;
+  font-size: 1.4rem;
+}
+
+/* Contenedor principal */
+#viewer {
+  position: relative;
+  width: 90%;
+  max-width: 400px;
+  height: 0;
+  padding-bottom: 75%; /* 4:3 ratio */
+  margin: 20px 0;
+  border: 2px solid #444;
+  overflow: hidden;
+  background: #000;
+}
+
+#viewer img,
+#viewer canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Miniaturas */
+#thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: 90%;
+  max-width: 400px;
+}
+
+#thumbnails img {
+  width: 23%;
+  min-width: 60px;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  cursor: pointer;
+  filter: blur(5px);
+  transition: 0.3s;
+  border: 2px solid transparent;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+#thumbnails img.unlocked {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#thumbnails img:hover {
+  border: 2px solid #007bff;
+}
+
+#thumbnails img.shine {
+  animation: shine 1.2s ease-out 2;
+}
+
+/* Mensaje emergente */
+#message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  padding: 15px 25px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 0 15px rgba(0,0,0,0.3);
+  display: none;
+  z-index: 1000;
+  animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+/* Animaciones */
+@keyframes shine {
+  0% { box-shadow: 0 0 5px #ffd700; }
+  50% { box-shadow: 0 0 20px #ffd700; }
+  100% { box-shadow: 0 0 5px #ffd700; }
+}
+
+@keyframes fadein { from {opacity: 0;} to {opacity: 1;} }
+@keyframes fadeout { from {opacity: 1;} to {opacity: 0;} }
+
+/* Media Queries para pantallas grandes */
+@media(min-width: 768px) {
+  #thumbnails img {
+    width: 18%;
+  }
+}
+
+@media(min-width: 1024px) {
+  h2 { font-size: 1.6rem; }
+}
+</style>
+</head>
+<body>
+
+<h2>Raspa y gana! Un bolón y un encebollado</h2>
+
+<div id="viewer">
+  <img id="mainImage" src="https://picsum.photos/400/300?random=1" alt="Imagen grande">
+  <canvas id="scratchCanvas"></canvas>
+</div>
+
+<div id="thumbnails">
+  <img src="1.jpg" alt="img1" class="unlocked">
+  <img src="3.jpg" alt="img2">
+  <img src="2.jpg" alt="img3">
+  <img src="4.jpg" alt="img4">
+  <img src="5.jpg" alt="img5">
+  <img src="6.jpg" alt="img6">
+  <img src="7.jpg" alt="img7">
+</div>
+
+<div id="message"></div>
+
+<script>
+const mainImage = document.getElementById("mainImage");
+const scratchCanvas = document.getElementById("scratchCanvas");
+const ctx = scratchCanvas.getContext("2d");
+const viewer = document.getElementById("viewer");
+const thumbnails = document.querySelectorAll("#thumbnails img");
+const messageBox = document.getElementById("message");
+
+let scratching = false;
+let currentIndex = 0; 
+let completed = [false, false, false]; 
+
+const frases = [
+  "Holi bonita, sigue raspando y ganarás premios incríbles!",
+  "No es una estafa. Pero solo vengo a intentar sacarte una sonrisita",
+  "Así que sigue raspando y saldrá algo que nos volvió algo feliz",
+  "No olvides que contigo todo se volvía tan lindo",
+  "De paso vengo a recordate que eres mi niña especial",
+  "Y por último no olvidar lo hermoshota que eres :3 Y que ganaste un bolón jajaj",
+  "Besitooooos, Marck <3"
+];
+
+// Ajusta tamaño del canvas al contenedor
+function resizeCanvas() {
+  scratchCanvas.width = viewer.clientWidth;
+  scratchCanvas.height = viewer.clientHeight;
+  if (!completed[currentIndex]) resetScratch();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// Resetear capa gris
+function resetScratch() {
+  ctx.globalCompositeOperation = "source-over";
+  ctx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+  ctx.fillStyle = "rgba(200,200,200,0.9)";
+  ctx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+  ctx.globalCompositeOperation = "destination-out";
+}
+
+// Mostrar imagen
+function showImage(index) {
+  currentIndex = index;
+  mainImage.src = thumbnails[index].src;
+  mainImage.onload = () => {
+    if (completed[index]) {
+      ctx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+    } else {
+      resetScratch();
+    }
+  };
+}
+
+// Mostrar mensaje
+function showMessage(text) {
+  messageBox.innerText = text;
+  messageBox.style.display = "block";
+  setTimeout(() => {
+    messageBox.style.display = "none";
+  }, 3000);
+}
+
+// Raspar
+function scratch(x, y) {
+  ctx.beginPath();
+  ctx.arc(x, y, 25, 0, Math.PI * 2);
+  ctx.fill();
+  checkProgress();
+}
+
+// Revisar progreso
+function checkProgress() {
+  if (completed[currentIndex]) return;
+  const pixels = ctx.getImageData(0, 0, scratchCanvas.width, scratchCanvas.height).data;
+  let cleared = 0;
+  for (let i = 3; i < pixels.length; i += 4) {
+    if (pixels[i] === 0) cleared++;
+  }
+  const percent = (cleared / (pixels.length / 4)) * 100;
+
+  if (percent > 70) {
+    completed[currentIndex] = true;
+    ctx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+    showMessage(frases[currentIndex]);
+
+    if (thumbnails[currentIndex + 1]) {
+      const nextThumb = thumbnails[currentIndex + 1];
+      nextThumb.classList.add("unlocked", "shine");
+      setTimeout(() => nextThumb.classList.remove("shine"), 1500);
+    }
+  }
+}
+
+// Eventos mouse
+scratchCanvas.addEventListener("mousedown", () => scratching = true);
+scratchCanvas.addEventListener("mouseup", () => scratching = false);
+scratchCanvas.addEventListener("mouseleave", () => scratching = false);
+scratchCanvas.addEventListener("mousemove", e => {
+  if (scratching) {
+    const rect = scratchCanvas.getBoundingClientRect();
+    scratch(e.clientX - rect.left, e.clientY - rect.top);
+  }
+});
+
+// Eventos touch
+scratchCanvas.addEventListener("touchstart", e => {
+  scratching = true;
+  e.preventDefault();
+});
+scratchCanvas.addEventListener("touchend", () => scratching = false);
+scratchCanvas.addEventListener("touchcancel", () => scratching = false);
+scratchCanvas.addEventListener("touchmove", e => {
+  if (scratching) {
+    const rect = scratchCanvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    scratch(touch.clientX - rect.left, touch.clientY - rect.top);
+  }
+});
+
+// Click en miniaturas
+thumbnails.forEach((img, index) => {
+  img.addEventListener("click", () => {
+    if (!img.classList.contains("unlocked")) return;
+    showImage(index);
+  });
+});
+
+// Iniciar en la primera
+resizeCanvas();
+showImage(0);
+</script>
+
+</body>
+</html>
